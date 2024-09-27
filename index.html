@@ -100,13 +100,14 @@
         <div class="row mt-3">
             <div class="col-md-12">
                 <div id="qrResult" class="alert alert-info" role="alert">
-                    请粘贴二维码图片
+                    二维码内容为
                 </div>
             </div>
         </div>
         <div class="row mt-2">
             <div class="col-md-12">
-                <button id="openUrlBtn" class="btn btn-primary">在新页面打开链接</button>
+                <button id="openUrlBtn" class="btn btn-primary me-2">在新页面打开链接</button>
+                <button id="copyResultBtn" class="btn btn-secondary">复制结果</button>
             </div>
         </div>
     </div>
@@ -116,6 +117,7 @@
         const qrInputText = document.getElementById('qrInputText');
         const qrResult = document.getElementById('qrResult');
         const openUrlBtn = document.getElementById('openUrlBtn');
+        const copyResultBtn = document.getElementById('copyResultBtn');
         let currentUrl = null;
 
         qrInputText.addEventListener('paste', handlePaste);
@@ -139,7 +141,7 @@
                             const code = jsQR(imageData.data, imageData.width, imageData.height);
                             
                             if (code) {
-                                qrResult.textContent = `二维码内容：${code.data}`;
+                                qrResult.textContent = `${code.data}`;
                                 qrResult.className = 'alert alert-success';
                                 
                                 if (isValidURL(code.data)) {
@@ -166,6 +168,20 @@
                 window.open(currentUrl, '_blank');
             } else {
                 showCustomAlert('当前内容不是有效的URL或未识别到二维码。');
+            }
+        };
+
+        copyResultBtn.onclick = function() {
+            const resultText = qrResult.textContent;
+            if (resultText && resultText !== '请粘贴二维码图片') {
+                navigator.clipboard.writeText(resultText).then(() => {
+                    showCustomAlert('结果已复制到剪贴板');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showCustomAlert('复制失败，请手动复制');
+                });
+            } else {
+                showCustomAlert('没有可复制的结果');
             }
         };
 
