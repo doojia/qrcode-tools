@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码工具</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #007bff;
+            margin-bottom: 2rem;
+        }
+        .navbar-brand, .nav-link {
+            color: white !important;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        #qrInput {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed #007bff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: text;
+            padding: 10px;
+        }
+        #qrInputText {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 16px;
+        }
+        #qrResult {
+            margin-top: 20px;
+        }
+        .main-container {
+            /* 主要内容container的特定样式 */
+            max-width: 800px; /* 例如，限制主要内容的宽度 */
+            margin: 0 auto; /* 居中显示 */
+        }
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 20px;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container nav-container"> <!-- 修改这里 -->
+            <a class="navbar-brand" href="#">二维码工具</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav"> <!-- 修改这里 -->
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">主页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="changelog.html">更新日志</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="contact.html">联系我们</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container"> <!-- 修改这里 -->
+        <div class="row">
+            <div class="col-md-12">
+                <div id="qrInput">
+                    <textarea id="qrInputText" placeholder="请在此处粘贴二维码图片"></textarea>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div id="qrResult" class="alert alert-info" role="alert">
+                    请粘贴二维码图片
+                </div>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-12">
+                <button id="openUrlBtn" class="btn btn-primary">在新页面打开链接</button>
+            </div>
+        </div>
+    </div>
+    <div id="customAlert" class="custom-alert"></div>
+
+    <script>
+        const qrInputText = document.getElementById('qrInputText');
+        const qrResult = document.getElementById('qrResult');
+        const openUrlBtn = document.getElementById('openUrlBtn');
+        let currentUrl = null;
+
+        qrInputText.addEventListener('paste', handlePaste);
+
+        function handlePaste(e) {
+            e.preventDefault();
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const img = new Image();
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            context.drawImage(img, 0, 0, img.width, img.height);
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
+                            
+                            if (code) {
+                                qrResult.textContent = `二维码内容：${code.data}`;
+                                qrResult.className = 'alert alert-success';
+                                
+                                if (isValidURL(code.data)) {
+                                    currentUrl = code.data;
+                                } else {
+                                    currentUrl = null;
+                                }
+                            } else {
+                                qrResult.textContent = '未能识别二维码，请确保粘贴的是二维码图片。';
+                                qrResult.className = 'alert alert-danger';
+                                currentUrl = null;
+                            }
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(blob);
+                    break;
+                }
+            }
+        }
+
+        openUrlBtn.onclick = function() {
+            if (currentUrl) {
+                window.open(currentUrl, '_blank');
+            } else {
+                showCustomAlert('当前内容不是有效的URL或未识别到二维码。');
+            }
+        };
+
+        function showCustomAlert(message) {
+            const alertElement = document.getElementById('customAlert');
+            alertElement.textContent = message;
+            alertElement.style.display = 'block';
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 1000);
+        }
+
+        function isValidURL(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
